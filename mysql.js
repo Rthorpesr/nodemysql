@@ -7,7 +7,7 @@ var connection = mysql.createConnection(
         user: "root",
 
         password: "Marine6226@@",
-        database: "gamestop_db"
+        database: "bamazon"
     });
 
 
@@ -35,8 +35,28 @@ connection.connect(function(err)
            {
         
                 if (err) throw err;
-                    console.log(res);
-                    connection.end();
-            
-            });
+                    //console.log(res);
+                    {
+                        for (var i = 0; i < res.length; i++) 
+                             {
+                                  console.log(
+                                  "item_id: " +
+                                    res[i].item_id+
+                                  " || Product_Name: " +
+                                  res[i].product_name +
+                                  " || Department: " +
+                                  res[i].department_name +
+                                  " || Price: " +
+                                  res[i].price +
+                                  " || Stock Quantity: " +
+                                  res[i].stock_quantity); 
+                             }
+                      
+                        connection.end();
+                    }
+            })
+        
         }
+
+
+        

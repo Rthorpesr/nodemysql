@@ -1,220 +1,337 @@
+// The customer module is part of bamazon.
+
+// Users can view a list of products in bamazon.
+
+// And select to purchase products.
+
+
+
+// Required node modules.
+
 var mysql = require("mysql");
+
 var inquirer = require("inquirer");
 
-var connection = mysql.createConnection(
-    {
-         host: "localhost",
-
-         // Your port; if not 3306
-         port: 3306,
-
-         // Your username
-         user: "root",
-
-         // Your password
-         password: "Marine6226@@",
-         database: "bamazon"
-    });
-
-connection.connect(function(err) 
-    {
-         if (err) throw err;
-         //runSearch();
-         productSearch();
-    });
 
 
-function productSearch() 
-    {
-         var query = "SELECT * FROM product";
-         connection.query(query, function(err, res) 
-              {
-                   for (var i = 0; i < res.length; i++) 
-                        {
-                             console.log(res[i].artist);
-                        }
-                             //runSearch();
-              });
-    }
+// Connects to the database.
 
-    
+var connection = mysql.createConnection({
+
+  host: "localhost",
+
+  port: 3306,
+
+
+
+  // Root is default username.
+
+  user: "root",
+
+  // Password is empty string.
+
+  password: "Marine6226@@",
+
+  database: "bamazon"
+
+});
+
+
+
+
+
+// If connection doesn't work, throws error, else...
+
+connection.connect(function(err) {
+
+  if (err) throw err;
+
+
+
+  // Displays list of available products.
+
+  displayProducts();
+
+
+
+});
+
+
+
+// Displays list of all available products.
+
+var displayProducts = function() {
+
+	var query = "Select * FROM products";
+
+	connection.query(query, function(err, res) {
+
+
+
+		if (err) throw err;
+
+
+
+		for (var i = 0; i < res.length; i++) {
+
+			console.log("Product ID: " + res[i].item_id + " || Product Name: " +
+
+						res[i].product_name + " || Price: " + res[i].price);
+
+		}
+
+
+
+		// Requests product and number of product items user wishes to purchase.
+
+  		requestProduct();
+
+	});
+
+};
+
+
+
+// Requests product and number of product items user wishes to purchase.
+
+var requestProduct = function() {
+
+	inquirer.prompt([{
+
+		name: "productID",
+
+		type: "input",
+
+		message: "Please enter product ID for product you want.",
+
+		validate: function(value) {
+
+			if (isNaN(value) === false) {
+
+				return true;
+
+			}
+
+			return false;
+
+		}
+
+	}, {
+
+		name: "productUnits",
+
+		type: "input",
+
+		message: "How many units do you want?",
+
+		validate: function(value) {
+
+			if (isNaN(value) === false) {
+
+				return true;
+
+			}
+
+			return false
+
+		}
+
+	}]).then(function(answer) {
+
+
+
+		// Queries database for selected product.
+
+		var query = "Select stock_quantity, price, department_name FROM products WHERE ?";
+
+		connection.query(query, { item_id: answer.productID}, function(err, res) {
+
+			
+
+			if (err) throw err;
+
+
+
+			var available_stock = res[0].stock_quantity;
+
+			var price_per_unit = res[0].price;
+
+		//	var productSales = res[0].product_sales;
+
+		//	var productDepartment = res[0].department_name;
+
+
+
+			// Checks there's enough inventory  to process user's request.
+
+			if (available_stock >= answer.productUnits) {
+
+
+
+				// Processes user's request passing in data to complete purchase.
+
+				completePurchase(available_stock, price_per_unit, answer.productID, answer.productUnits);
+
+			} else {
+
+
+
+				// Tells user there isn't enough stock left.
+
+				console.log("There isn't enough stock left!");
+
+
+
+				// Lets user request a new product.
+
+				requestProduct();
+
+			}
+
+		});
+
+	});
+
+};
+
+
+
+
+
+// Completes user's request to purchase product.
+
+var completePurchase = function(availableStock, price, selectedProductID, selectedProductUnits) {
+
+	
+
+	// Updates stock quantity once purchase complete.
+
+	var updatedStockQuantity = availableStock - selectedProductUnits;
+
+
+
+	// Calculates total price for purchase based on unit price, and number of units.
+
+	var totalPrice = price * selectedProductUnits;
+
+
+
+	// Updates total product sales.
+
+	//var updatedProductSales = parseInt(productSales) + parseInt(totalPrice);
+
+	
+
+	// Updates stock quantity on the database based on user's purchase.
+
+	var query = "UPDATE products SET ? WHERE ?";
+
+	connection.query(query, [{
+
+		stock_quantity: updatedStockQuantity,
+
+		//product_sales: updatedProductSales
+
+	}, {
+
+		item_id: selectedProductID
+
+	}], function(err, res) {
+
+
+
+		if (err) throw err;
+
+		// Tells user purchase is a success.
+
+		console.log("Yay, your purchase is complete.");
+
+
+
+		// Display the total price for that purchase.
+
+		console.log("You're mythical payment has been received in the amount of : " + totalPrice);
+
+     
+
+		// Updates department revenue based on purchase.
+
+		//updateDepartmentRevenue(updatedProductSales, productDepartment);
+    displayProducts();
+		// Displays products so user can make a new selection.
+
+	});
+
+};
+
+
 /*
-function runSearch() {
-  inquirer
-    .prompt({
-      name: "action",
-      type: "rawlist",
-      message: "What would you like to do?",
-      choices: [
-        "Find songs by artist",
-        "Find all artists who appear more than once",
-        "Find data within a specific range",
-        "Search for a specific song",
-        "Find artists with a top song and top album in the same year"
-      ]
-    })
-    .then(function(answer) {
-      switch (answer.action) {
-      case "Find songs by artist":
-        artistSearch();
-        break;
+// Updates total sales for department after completed purchase.
 
-      case "Find all artists who appear more than once":
-        multiSearch();
-        break;
-
-      case "Find data within a specific range":
-        rangeSearch();
-        break;
-
-      case "Show all product available for sale":
-        productSearch();
-        break;
-
-      case "Find artists with a top song and top album in the same year":
-        songAndAlbumSearch();
-        break;
-      }
-    });
-}
-
-function artistSearch() {
-  inquirer
-    .prompt({
-      name: "artist",
-      type: "input",
-      message: "What artist would you like to search for?"
-    })
-    .then(function(answer) {
-      var query = "SELECT position, song, year FROM top5000 WHERE ?";
-      connection.query(query, { artist: answer.artist }, function(err, res) {
-        for (var i = 0; i < res.length; i++) {
-          console.log("Position: " + res[i].position + " || Song: " + res[i].song + " || Year: " + res[i].year);
-        }
-        runSearch();
-      });
-    });
-}
- 
-
-function productSearch() {
-  var query = "SELECT * FROM product";
-  connection.query(query, function(err, res) {
-    for (var i = 0; i < res.length; i++) {
-      console.log(res[i].artist);
-    }
-    runSearch();
-  });
-}
-
- 
-function rangeSearch() {
-  inquirer
-    .prompt([
-      {
-        name: "start",
-        type: "input",
-        message: "Enter starting position: ",
-        validate: function(value) {
-          if (isNaN(value) === false) {
-            return true;
-          }
-          return false;
-        }
-      },
-      {
-        name: "end",
-        type: "input",
-        message: "Enter ending position: ",
-        validate: function(value) {
-          if (isNaN(value) === false) {
-            return true;
-          }
-          return false;
-        }
-      }
-    ])
-    .then(function(answer) {
-      var query = "SELECT position,song,artist,year FROM top5000 WHERE position BETWEEN ? AND ?";
-      connection.query(query, [answer.start, answer.end], function(err, res) {
-        for (var i = 0; i < res.length; i++) {
-          console.log(
-            "Position: " +
-              res[i].position +
-              " || Song: " +
-              res[i].song +
-              " || Artist: " +
-              res[i].artist +
-              " || Year: " +
-              res[i].year
-          );
-        }
-        runSearch();
-      });
-    });
-}
-
-function songSearch() {
-  inquirer
-    .prompt({
-      name: "song",
-      type: "input",
-      message: "What song would you like to look for?"
-    })
-    .then(function(answer) {
-      console.log(answer.song);
-      connection.query("SELECT * FROM top5000 WHERE ?", { song: answer.song }, function(err, res) {
-        console.log(
-          "Position: " +
-            res[0].position +
-            " || Song: " +
-            res[0].song +
-            " || Artist: " +
-            res[0].artist +
-            " || Year: " +
-            res[0].year
-        );
-        runSearch();
-      });
-    });
-}
-
-function songAndAlbumSearch() {
-  inquirer
-    .prompt({
-      name: "artist",
-      type: "input",
-      message: "What artist would you like to search for?"
-    })
-    .then(function(answer) {
-      var query = "SELECT top_albums.year, top_albums.album, top_albums.position, top5000.song, top5000.artist ";
-      query += "FROM top_albums INNER JOIN top5000 ON (top_albums.artist = top5000.artist AND top_albums.year ";
-      query += "= top5000.year) WHERE (top_albums.artist = ? AND top5000.artist = ?) ORDER BY top_albums.year, top_albums.position";
-
-      connection.query(query, [answer.artist, answer.artist], function(err, res) {
-        console.log(res.length + " matches found!");
-        for (var i = 0; i < res.length; i++) {
-          console.log(
-            i+1 + ".) " +
-              "Year: " +
-              res[i].year +
-              " Album Position: " +
-              res[i].position +
-              " || Artist: " +
-              res[i].artist +
-              " || Song: " +
-              res[i].song +
-              " || Album: " +
-              res[i].album
-          );
-        }
-
-        runSearch();
-      });
-    });
+var updateDepartmentRevenue = function(updatedProductSales, productDepartment) {
 
 
- 
-}
+
+	// Query database for total sales value for department.
+
+	var query = "Select total_sales FROM departments WHERE ?";
+
+	connection.query(query, { department_name: productDepartment}, function(err, res) {
+
+
+
+		if (err) throw err;
+
+
+
+		var departmentSales = res[0].total_sales;
+
+
+
+		var updatedDepartmentSales = parseInt(departmentSales) + parseInt(updatedProductSales);
+
+
+
+		// Completes update to total sales for department.
+
+		completeDepartmentSalesUpdate(updatedDepartmentSales, productDepartment);
+
+	});
+
+};
+
+
+
+// Completes update to total sales for department on database.
+
+var completeDepartmentSalesUpdate = function(updatedDepartmentSales, productDepartment) {
+
+
+
+	var query = "UPDATE departments SET ? WHERE ?";
+
+	connection.query(query, [{
+
+		total_sales: updatedDepartmentSales
+
+	}, {
+
+		department_name: productDepartment
+
+	}], function(err, res) {
+
+
+
+		if (err) throw err;
+
+
+
+		// Displays products so user can choose to make another purchase.
+
+		displayProducts();
+
+	});
+
+};
 
 */
