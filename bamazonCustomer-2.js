@@ -37,9 +37,6 @@ var connection = mysql.createConnection({
 });
 
 
-
-
-
 // If connection doesn't work, throws error, else...
 
 connection.connect(function(err) {
@@ -76,12 +73,11 @@ var displayProducts = function() {
 
 			console.log("Product ID: " + res[i].item_id + " || Product Name: " +
 
-						res[i].product_name + " || Price: " + res[i].price);
-
+						res[i].product_name + "|| Stock Quantity: " + res[i].stock_quantity
+						 +" || Price: " + res[i].price);
 		}
 
-
-
+        console.log("\n");
 		// Requests product and number of product items user wishes to purchase.
 
   		requestProduct();
@@ -89,7 +85,6 @@ var displayProducts = function() {
 	});
 
 };
-
 
 
 // Requests product and number of product items user wishes to purchase.
@@ -113,7 +108,6 @@ var requestProduct = function() {
 			}
 
 			return false;
-
 		}
 
 	}, {
@@ -156,12 +150,6 @@ var requestProduct = function() {
 
 			var price_per_unit = res[0].price;
 
-		//	var productSales = res[0].product_sales;
-
-		//	var productDepartment = res[0].department_name;
-
-
-
 			// Checks there's enough inventory  to process user's request.
 
 			if (available_stock >= answer.productUnits) {
@@ -177,9 +165,10 @@ var requestProduct = function() {
 
 
 				// Tells user there isn't enough stock left.
-
-				console.log("There isn't enough stock left!");
-
+                console.log("\n");
+				console.log("Sorry, there isn't enough of that item in stock!");
+				console.log("\n");
+				displayProducts();
 
 
 				// Lets user request a new product.
@@ -193,9 +182,6 @@ var requestProduct = function() {
 	});
 
 };
-
-
-
 
 
 // Completes user's request to purchase product.
@@ -212,15 +198,7 @@ var completePurchase = function(availableStock, price, selectedProductID, select
 
 	// Calculates total price for purchase based on unit price, and number of units.
 
-	var totalPrice = price * selectedProductUnits;
-
-
-
-	// Updates total product sales.
-
-	//var updatedProductSales = parseInt(productSales) + parseInt(totalPrice);
-
-	
+	var totalPrice = parseFloat(price * selectedProductUnits);
 
 	// Updates stock quantity on the database based on user's purchase.
 
@@ -229,8 +207,6 @@ var completePurchase = function(availableStock, price, selectedProductID, select
 	connection.query(query, [{
 
 		stock_quantity: updatedStockQuantity,
-
-		//product_sales: updatedProductSales
 
 	}, {
 
@@ -243,95 +219,16 @@ var completePurchase = function(availableStock, price, selectedProductID, select
 		if (err) throw err;
 
 		// Tells user purchase is a success.
-
-		console.log("Yay, your purchase is complete.");
-
-
+        console.log("\n");
+		console.log("Congratulations!, your purchase is complete.");
 
 		// Display the total price for that purchase.
 
-		console.log("You're mythical payment has been received in the amount of : " + totalPrice);
-
-     
-
-		// Updates department revenue based on purchase.
-
-		//updateDepartmentRevenue(updatedProductSales, productDepartment);
-    displayProducts();
+		console.log("Thank you, the payment has been received in the amount of : " + totalPrice);
+        console.log("\n");
+        
 		// Displays products so user can make a new selection.
 
 	});
-
+    displayProducts();
 };
-
-
-/*
-// Updates total sales for department after completed purchase.
-
-var updateDepartmentRevenue = function(updatedProductSales, productDepartment) {
-
-
-
-	// Query database for total sales value for department.
-
-	var query = "Select total_sales FROM departments WHERE ?";
-
-	connection.query(query, { department_name: productDepartment}, function(err, res) {
-
-
-
-		if (err) throw err;
-
-
-
-		var departmentSales = res[0].total_sales;
-
-
-
-		var updatedDepartmentSales = parseInt(departmentSales) + parseInt(updatedProductSales);
-
-
-
-		// Completes update to total sales for department.
-
-		completeDepartmentSalesUpdate(updatedDepartmentSales, productDepartment);
-
-	});
-
-};
-
-
-
-// Completes update to total sales for department on database.
-
-var completeDepartmentSalesUpdate = function(updatedDepartmentSales, productDepartment) {
-
-
-
-	var query = "UPDATE departments SET ? WHERE ?";
-
-	connection.query(query, [{
-
-		total_sales: updatedDepartmentSales
-
-	}, {
-
-		department_name: productDepartment
-
-	}], function(err, res) {
-
-
-
-		if (err) throw err;
-
-
-
-		// Displays products so user can choose to make another purchase.
-
-		displayProducts();
-
-	});
-
-};
-
-*/
