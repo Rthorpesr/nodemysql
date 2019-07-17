@@ -1,125 +1,234 @@
+// The customer module is part of bamazon.
+
+// Users can view a list of products in bamazon.
+
+// And select to purchase products.
+
+
+
+// Required node modules.
+
 var mysql = require("mysql");
+
 var inquirer = require("inquirer");
 
-var connection = mysql.createConnection(
-    {
-        host: "localhost",
-        port: 3306,
-        user: "root",
-
-        password: "Marine6226@@",
-        database: "bamazon"
-    });
 
 
+// Connects to the database.
 
-connection.connect(function(err)
-   {
-       if(err) throw err;
-       console.log("connected as id " + connection.threadId);
-       //connection.end();
-       productInventorycheck();
-    });
+var connection = mysql.createConnection({
 
-    var sequel = "Select * from products"
+  host: "localhost",
 
-    var updateSQL = "update Owners set address = '809 Baltimore MD' where name = 'Thorpe'"; 
- /*
-    function afterConnection1()
-        {
-            connection.query(sequel, function(err,res)
-            {
+  port: 3306,
+
+
+
+  // Root is default username.
+
+  user: "root",
+
+  // Password is empty string.
+
+  password: "Marine6226@@",
+
+  database: "bamazon"
+
+});
+
+
+// If connection doesn't work, throws error, else...
+
+connection.connect(function(err) {
+
+  if (err) throw err;
+
+
+
+  // Displays list of available products.
+
+  displayProducts();
+
+
+
+});
+
+
+
+// Displays list of all available products.
+
+var displayProducts = function() {
+
+	var query = "Select * FROM products";
+
+	connection.query(query, function(err, res) {
+
+
+
+		if (err) throw err;
+
+
+
+		for (var i = 0; i < res.length; i++) {
+
+			console.log("Product ID: " + res[i].item_id + " || Product Name: " +
+
+						res[i].product_name + "|| Stock Quantity: " + res[i].stock_quantity
+						 +" || Price: " + res[i].price);
+		}
+
+        console.log("\n");
+		// Requests product and number of product items user wishes to purchase.
+
+  		requestProduct();
+
+	});
+
+};
+
+
+// Requests product and number of product items user wishes to purchase.
+
+var requestProduct = function() {
+
+	inquirer.prompt([{
+
+		name: "productID",
+
+		type: "input",
+
+		message: "Please enter product ID for product you want.",
+
+		validate: function(value) {
+
+			if (isNaN(value) === false) {
+
+				return true;
+
+			}
+
+			return false;
+		}
+
+	}, {
+
+		name: "productUnits",
+
+		type: "input",
+
+		message: "How many units do you want?",
+
+		validate: function(value) {
+
+			if (isNaN(value) === false) {
+
+				return true;
+
+			}
+
+			return false
+
+		}
+
+	}]).then(function(answer) {
+
+
+
+		// Queries database for selected product.
+
+		var query = "Select stock_quantity, price, department_name FROM products WHERE ?";
+
+		connection.query(query, { item_id: answer.productID}, function(err, res) {
+
+			
+
+			if (err) throw err;
+
+
+
+			var available_stock = res[0].stock_quantity;
+
+			var price_per_unit = res[0].price;
+
+			// Checks there's enough inventory  to process user's request.
+
+			if (available_stock >= answer.productUnits) {
+
+
+
+				// Processes user's request passing in data to complete purchase.
+
+				completePurchase(available_stock, price_per_unit, answer.productID, answer.productUnits);
+
+			} else {
+
+
+
+				// Tells user there isn't enough stock left.
+                console.log("\n");
+				console.log("Sorry, there isn't enough of that item in stock!");
+				console.log("\n");
+				displayProducts();
+
+
+				// Lets user request a new product.
+
+				requestProduct();
+
+			}
+
+		});
+
+	});
+
+};
+
+
+// Completes user's request to purchase product.
+
+var completePurchase = function(availableStock, price, selectedProductID, selectedProductUnits) {
+
+	
+
+	// Updates stock quantity once purchase complete.
+
+	var updatedStockQuantity = availableStock - selectedProductUnits;
+
+
+
+	// Calculates total price for purchase based on unit price, and number of units.
+
+	var totalPrice = parseFloat(price * selectedProductUnits);
+
+	// Updates stock quantity on the database based on user's purchase.
+
+	var query = "UPDATE products SET ? WHERE ?";
+
+	connection.query(query, [{
+
+		stock_quantity: updatedStockQuantity,
+
+	}, {
+
+		item_id: selectedProductID
+
+	}], function(err, res) {
+
+
+
+		if (err) throw err;
+
+		// Tells user purchase is a success.
+        console.log("\n");
+		console.log("Congratulations!, your purchase is complete.");
+
+		// Display the total price for that purchase.
+
+		console.log("Thank you, the payment has been received in the amount of : " + totalPrice);
+        console.log("\n");
         
-                if (err) throw err;
-                    console.log(res);
-                    connection.end();
-            
-            });
-        }
-  */
- 
-        function  productInventorycheck()
-        {
-            connection.query("select * from products", function(err,res)
-            //connection.query("select * from ?", { name: "Thorpe"}, function(err,res)
-           // connection.query("update game set ? where ?" , [{rating: "nc-17}"}, {name:"skyrim"} ], function(err, res)
-           // connection.query("insert into game set ?", (name: "Fallout", genre: "RPG", rating: "M", publisher_id: 2 }, function(err, res)
-           // connection.query("delete game set ? where ?" , [{rating: "nc-17}"}, {name:"skyrim"} ], function(err, res)
-           
-           {
-        
-                if (err) throw err;
-                    console.log(res);
-                    connection.end();
-            
-            });
+		// Displays products so user can make a new selection.
 
-            inquirer
-                .prompt([
-                  {
-                     type:    "input",
-                     name:    "item_id", 
-                     message: "What is the product id of the item you want to purchase?",
-                  },
-                  
-                  {
-                     type:    "input",
-                     name:    "quantity",
-                     message: "How many do you want to purchase?",
-                     validate: function(input) 
-                                      {
-                                        return!(isNaN(parseFloat(input))); 
-                                      }    
-                  }
-                    
-                ]).then(function(response)
-                    {
-                        connection.query("Select * From products Where item_id =" + response.item_id,
-                    }
-                
-        }
-
-
-/*
-var mysql = require("mysql");
-
-var connection = mysql.createConnection(
-    {
-        host: "localhost",
-        port: 3306,
-        user: "root",
-
-        password: "Marine6226@@",
-        database: "bamazon"
-    });
-
-
-    connection.connect(function(err)
-    {
-        if(err) throw err;
-        console.log("connected as id " + connection.threadId);
-        //connection.end();
-        selectProducts();
-     });
-
-
-    var sequel = "Select * from Products"
-
-    var updateSQL = "update Owners set address = '809 Baltimore MD' where name = 'Thorpe'"; 
- 
-
-
-    function selectProducts()
-        {
-            //connection.query(sequel, function(err,res)
-            connection.query("select * from products", function(err,res) 
-            {
-        
-                if (err) throw err;
-                    console.log(res);
-                    connection.end();
-            
-            });
-        }
-
-*/
+	});
+    displayProducts();
+};
